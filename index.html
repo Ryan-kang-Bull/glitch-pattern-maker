@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Glitch Pattern Maker — Consensus</title>
+<style>
+  :root{
+    --straw:#FF0061; --teal:#26EBFF; --ink:#000000;
+    --panel:#0d0d0f; --panel2:#161619; --line:#2a2a30;
+    --txt:#e9e9ec; --txt-dim:#8a8a93;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    background:#060607;color:var(--txt);display:flex;height:100vh;overflow:hidden;
+  }
+  .sidebar{width:340px;min-width:340px;height:100%;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column}
+  .brandbar{padding:18px 20px 14px;border-bottom:1px solid var(--line)}
+  .brandbar h1{font-size:13px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;display:flex;align-items:center;gap:9px}
+  .brandbar .dot{width:11px;height:22px;border-radius:3px;background:var(--straw);display:inline-block}
+  .brandbar .dot.t{background:var(--teal);height:16px}
+  .brandbar p{font-size:11px;color:var(--txt-dim);margin-top:6px}
+  .scroll{overflow-y:auto;flex:1;padding:6px 20px 24px}
+  .scroll::-webkit-scrollbar{width:8px}
+  .scroll::-webkit-scrollbar-thumb{background:#26262c;border-radius:8px}
+  .group{padding:16px 0;border-bottom:1px solid var(--line)}
+  .group:last-child{border-bottom:none}
+  .group h2{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--txt-dim);margin-bottom:12px}
+  .row{margin-bottom:14px}
+  .row:last-child{margin-bottom:0}
+  .lbl{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;margin-bottom:6px}
+  .lbl em{color:var(--txt-dim);font-style:normal}
+  .lbl .val{color:var(--teal);font-variant-numeric:tabular-nums;font-weight:600;font-size:11px}
+  input[type=range]{-webkit-appearance:none;width:100%;height:4px;border-radius:4px;background:#2a2a30;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--straw);cursor:pointer;border:2px solid #060607;box-shadow:0 0 0 1px var(--straw)}
+  .btnset{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{background:var(--panel2);border:1px solid var(--line);color:var(--txt-dim);border-radius:7px;padding:7px 10px;font-size:12px;font-weight:600;cursor:pointer;transition:.12s;flex:1;text-align:center;min-width:52px}
+  .chip:hover{border-color:#3a3a44}
+  .chip.on{background:var(--straw);color:#fff;border-color:var(--straw)}
+  .chip.teal.on{background:var(--teal);color:#000;border-color:var(--teal)}
+  .swrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .sw{width:34px;height:34px;border-radius:8px;border:2px solid var(--line);cursor:pointer;position:relative;transition:.12s}
+  .sw.on{border-color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.15)}
+  .sw.check::after{content:"";position:absolute;inset:0;border-radius:6px}
+  .sw-custom{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--txt-dim)}
+  input[type=color]{width:34px;height:34px;border:1px solid var(--line);border-radius:8px;background:none;cursor:pointer;padding:2px}
+  .txt{flex:1;min-width:0;background:var(--panel2);border:1px solid var(--line);border-radius:7px;color:var(--txt);font-size:12px;padding:8px 10px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;outline:none}
+  .txt:focus{border-color:var(--teal)}
+  .txt.bad{border-color:#ff4d6d}
+  .custItem{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+  .custItem .csw{width:26px;height:26px;border-radius:6px;border:1px solid var(--line);flex:none}
+  .custItem .del{flex:none;width:26px;height:26px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--txt-dim);cursor:pointer;font-size:14px;line-height:1}
+  .custItem .del:hover{border-color:#ff4d6d;color:#ff6a8a}
+  .addrow{display:flex;gap:6px;margin-bottom:10px}
+  .toggle-line{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--txt);cursor:pointer;user-select:none}
+  .chk{width:34px;height:19px;border-radius:20px;background:#2a2a30;position:relative;transition:.15s;flex:none}
+  .chk::after{content:"";position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;background:#777;transition:.15s}
+  .chk.on{background:var(--straw)}
+  .chk.on::after{left:17px;background:#fff}
+  .hint{font-size:10px;color:var(--txt-dim);margin-top:8px;line-height:1.5}
+  .btns{display:flex;gap:8px;padding:14px 20px;border-top:1px solid var(--line);background:var(--panel)}
+  .btn{flex:1;padding:11px;border-radius:9px;border:none;cursor:pointer;font-weight:700;font-size:12px;transition:.12s}
+  .btn.primary{background:var(--straw);color:#fff}
+  .btn.primary:hover{filter:brightness(1.1)}
+  .btn.ghost{background:var(--panel2);color:var(--txt);border:1px solid var(--line)}
+  .btn.ghost:hover{border-color:var(--teal)}
+  .stage{flex:1;display:flex;flex-direction:column;min-width:0}
+  .topbar{height:52px;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 20px;gap:14px;background:var(--panel)}
+  .topbar .title{font-size:13px;font-weight:700}
+  .topbar .spacer{flex:1}
+  .miniseg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+  .miniseg button{background:transparent;border:none;color:var(--txt-dim);padding:6px 12px;font-size:11px;cursor:pointer;font-weight:600}
+  .miniseg button.on{background:var(--panel2);color:var(--teal)}
+  .canvas-wrap{flex:1;display:flex;align-items:center;justify-content:center;overflow:auto;padding:34px;
+    background:linear-gradient(45deg,#0a0a0b 25%,transparent 25%),linear-gradient(-45deg,#0a0a0b 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#0a0a0b 75%),linear-gradient(-45deg,transparent 75%,#0a0a0b 75%);
+    background-size:22px 22px;background-position:0 0,0 11px,11px -11px,-11px 0;background-color:#0e0e10}
+  #svgHost svg{box-shadow:0 20px 60px rgba(0,0,0,.55);max-width:100%;max-height:calc(100vh - 120px);display:block}
+  #errbox{color:#ff6a8a;font-size:12px;font-family:monospace;padding:20px;white-space:pre-wrap;display:none}
+</style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brandbar">
+      <h1><span class="dot"></span><span class="dot t"></span>&nbsp;Glitch Pattern Maker</h1>
+      <p>CoinDesk / Consensus block system</p>
+    </div>
+    <div class="scroll">
+
+      <div class="group">
+        <h2>Pattern type</h2>
+        <div class="row"><div class="btnset" id="modeBtns"></div></div>
+        <div class="hint" id="modeHint"></div>
+        <div class="row" id="blocksRow" style="display:none;margin-top:12px">
+          <div class="lbl"><span># of Blocks <em>(complexity / count)</em></span><span class="val" id="v_blocks"></span></div>
+          <input type="range" id="blocks" min="3" max="80" step="1">
+        </div>
+        <div class="row" id="symRow" style="display:none">
+          <div class="lbl"><span>Symmetry</span></div>
+          <div class="btnset" id="symBtns"></div>
+        </div>
+      </div>
+
+      <div class="group">
+        <h2>Canvas &amp; unit ratio</h2>
+        <div class="row">
+          <div class="lbl"><span>Glitch unit ratio <em>(block W:H)</em></span></div>
+          <div class="btnset" id="ratioBtns"></div>
+        </div>
+        <div class="row">
+          <div class="lbl"><span>Canvas shape</span></div>
+          <div class="btnset" id="sizeBtns"></div>
+        </div>
+      </div>
+
+      <div class="group">
+        <h2>Structure</h2>
+        <div class="row">
+          <div class="lbl"><span>Glitch unit scale <em>(granularity)</em></span><span class="val" id="v_unit"></span></div>
+          <input type="range" id="unit" min="12" max="90" step="1">
+        </div>
+        <div class="row">
+          <div class="lbl"><span>Glitch distance <em>(gap / overlap)</em></span><span class="val" id="v_gap"></span></div>
+          <input type="range" id="gap" min="-50" max="50" step="1">
+        </div>
+        <div class="row">
+          <div class="lbl"><span>Displacement <em>(jitter)</em></span><span class="val" id="v_disp"></span></div>
+          <input type="range" id="disp" min="0" max="100" step="1">
+        </div>
+        <div class="row">
+          <div class="lbl"><span>Height variance</span><span class="val" id="v_hvar"></span></div>
+          <input type="range" id="hvar" min="0" max="100" step="1">
+        </div>
+        <div class="row">
+          <div class="lbl"><span>Density</span><span class="val" id="v_dens"></span></div>
+          <input type="range" id="dens" min="20" max="100" step="1">
+        </div>
+        <div class="row">
+          <div class="lbl"><span>Mix unit sizes <em>(varied widths)</em></span></div>
+          <div class="btnset" id="mixBtns"></div>
+        </div>
+        <div class="row" id="mixAmtRow" style="display:none">
+          <div class="lbl"><span>Mix amount</span><span class="val" id="v_mixAmount"></span></div>
+          <input type="range" id="mixAmount" min="10" max="100" step="1">
+        </div>
+      </div>
+
+      <div class="group">
+        <h2>Block style</h2>
+        <div class="row"><div class="btnset" id="fillBtns"></div></div>
+        <div class="row" id="strokeRow" style="display:none">
+          <div class="lbl"><span>Stroke thickness</span><span class="val" id="v_stroke"></span></div>
+          <input type="range" id="stroke" min="1" max="16" step="1">
+        </div>
+        <div class="row" id="strokeColorRow" style="display:none">
+          <div class="lbl"><span>Line color</span></div>
+          <div class="swrow" id="strokeColorSwatches"></div>
+        </div>
+        <div class="row">
+          <div class="lbl"><span>Corner radius</span><span class="val" id="v_rad"></span></div>
+          <input type="range" id="rad" min="0" max="50" step="1">
+        </div>
+      </div>
+
+      <div class="group">
+        <h2>Depth &amp; motion</h2>
+        <div class="row">
+          <div class="lbl"><span>3D extrude <em>(depth)</em></span><span class="val" id="v_depth"></span></div>
+          <input type="range" id="depth" min="0" max="120" step="1">
+        </div>
+        <div class="row">
+          <div class="lbl"><span>Extrude angle</span><span class="val" id="v_dang"></span></div>
+          <input type="range" id="dang" min="0" max="360" step="15">
+        </div>
+        <div class="row">
+          <div class="lbl"><span>Extrude fill</span></div>
+          <div class="btnset" id="extFillBtns"></div>
+        </div>
+        <div class="row" id="extColorRow" style="display:none">
+          <div class="lbl"><span>Extrude color</span></div>
+          <div class="swrow" id="extColorSwatches"></div>
+        </div>
+        <div class="row">
+          <div class="lbl"><span>Echo style</span></div>
+          <div class="btnset" id="echoStyleBtns"></div>
+        </div>
+        <div class="row">
+          <div class="lbl"><span>Echo count</span><span class="val" id="v_echo"></span></div>
+          <input type="range" id="echo" min="0" max="16" step="1">
+        </div>
+        <div class="row">
+          <div class="lbl"><span>Echo offset / spread</span><span class="val" id="v_eoff"></span></div>
+          <input type="range" id="eoff" min="2" max="70" step="1">
+        </div>
+        <div class="hint" id="echoHint"></div>
+      </div>
+
+      <div class="group">
+        <h2>Color</h2>
+        <div class="row">
+          <div class="lbl"><span>Background color</span></div>
+          <div class="swrow" id="bgSwatches"></div>
+        </div>
+        <div class="row">
+          <div class="lbl"><span>Glitch color</span></div>
+          <div class="btnset" id="colorModeBtns"></div>
+        </div>
+        <div class="row" id="singleRow">
+          <div class="swrow" id="glitchSwatches"></div>
+        </div>
+        <div class="row" id="multiRow" style="display:none">
+          <div class="lbl"><span id="multiLbl">Randomize between (pick 2+)</span></div>
+          <div class="swrow" id="multiSwatches"></div>
+        </div>
+        <div class="hint">Brand note: the pattern should never be white — white swatches are included only for experiments.</div>
+      </div>
+
+      <div class="group">
+        <h2>Custom colors</h2>
+        <div class="addrow">
+          <input type="text" id="customInput" class="txt" placeholder="#FF0061 or 255,0,97">
+          <button class="btn ghost" id="customAdd" style="flex:0 0 auto;padding:8px 14px">Add</button>
+        </div>
+        <div id="customList"></div>
+        <div class="hint">Add colors as HEX (<code>#FF0061</code>) or RGB (<code>255,0,97</code> or <code>rgb(255,0,97)</code>). They appear as swatches for background, glitch and palette. Edit a code or delete with ×.</div>
+      </div>
+    </div>
+    <div class="btns">
+      <button class="btn ghost" id="regen">↻ Regenerate</button>
+      <button class="btn primary" id="dl">↓ Download SVG</button>
+    </div>
+  </aside>
+
+  <main class="stage">
+    <div class="topbar">
+      <span class="title">Preview</span>
+      <div class="miniseg" id="rotBtns"></div>
+      <div class="spacer"></div>
+      <span class="hint" style="margin:0" id="dimLabel"></span>
+    </div>
+    <div class="canvas-wrap">
+      <div id="svgHost"></div>
+      <div id="errbox"></div>
+    </div>
+  </main>
+
+<script>
+/* =============================================================
+   Glitch Pattern Maker v2 — CoinDesk / Consensus block system
+   ============================================================= */
+
+var PAL = [
+  {name:'Strawberry', hex:'#FF0061'},
+  {name:'Teal',       hex:'#26EBFF'},
+  {name:'Black',      hex:'#000000'},
+  {name:'White',      hex:'#FFFFFF'}
+];
+
+var RATIOS = [
+  {label:'1:1',  w:1,  h:1},
+  {label:'4:5',  w:4,  h:5},
+  {label:'2:3',  w:2,  h:3},
+  {label:'3:2',  w:3,  h:2},
+  {label:'16:9', w:16, h:9},
+  {label:'9:16', w:9,  h:16}
+];
+
+var SIZES = [
+  {label:'1:1',  key:'square', w:900,  h:900},
+  {label:'16:9', key:'wide',   w:1200, h:675},
+  {label:'4:5',  key:'portrait', w:864, h:1080},
+  {label:'9:16', key:'story',  w:675,  h:1200}
+];
+
+var S = {
+  mode:'glitch',
+  blocks:16, sym:'none',
+  ratioIdx:0, sizeKey:'square',
+  unit:44, gap:6, disp:24, hvar:55, dens:80,
+  mixUnits:false, mixAmount:55,
+  fill:'filled', stroke:6, rad:12,
+  depth:0, dang:135, echo:0, eoff:16, echoStyle:'trail',
+  extFill:'shade', extColor:'#0B1550',
+  bg:'#000000',
+  glitch:'#FF0061',
+  multi:false,
+  multiSet:['#FF0061','#26EBFF'],
+  strokeColor:'#FF0061',
+  customColors:[],
+  rot:0, seed:12345
+};
+
+/* parse a HEX (#rgb / #rrggbb / rrggbb) or RGB (r,g,b / rgb(r,g,b)) string
+   into a normalized "#RRGGBB", or return null if invalid */
+function parseColor(str){
+  if(!str) return null;
+  var s=String(str).trim().toLowerCase();
+  var m=s.match(/^#?([0-9a-f]{3})$/);
+  if(m){var t=m[1];return ('#'+t[0]+t[0]+t[1]+t[1]+t[2]+t[2]).toUpperCase();}
+  m=s.match(/^#?([0-9a-f]{6})$/);
+  if(m) return ('#'+m[1]).toUpperCase();
+  m=s.match(/^(?:rgb\s*\(\s*)?(\d{1,3})\s*[, ]\s*(\d{1,3})\s*[, ]\s*(\d{1,3})\s*\)?$/);
+  if(m){
+    var r=+m[1],g=+m[2],b=+m[3];
+    if(r>255||g>255||b>255) return null;
+    return '#'+[r,g,b].map(function(v){return v.toString(16).padStart(2,'0');}).join('').toUpperCase();
+  }
+  return null;
+}
+
+/* ---- seeded RNG ---- */
+function rng(seed){var a=seed>>>0;return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+function f2(n){return Math.round(n*100)/100;}
+function shade(hex,amt){var c=hex.replace('#','');if(c.length===3)c=c.split('').map(function(x){return x+x;}).join('');var r=parseInt(c.slice(0,2),16),g=parseInt(c.slice(2,4),16),b=parseInt(c.slice(4,6),16);function f(v){return Math.round(clamp(v+(amt<0?v*amt:(255-v)*amt),0,255));}return '#'+[f(r),f(g),f(b)].map(function(v){return v.toString(16).padStart(2,'0');}).join('');}
+
+function dims(){for(var i=0;i<SIZES.length;i++){if(SIZES[i].key===S.sizeKey)return SIZES[i];}return SIZES[0];}
+
+/* ---- base block unit: width is the 1x reference; height follows the
+   chosen ratio. Brand height multiples are 1x,1.25x,1.5x,2x,2.5x. ---- */
+function baseUnit(){
+  var ratio=RATIOS[S.ratioIdx];
+  return { w:S.unit, h:Math.max(6, S.unit*ratio.h/ratio.w) };
+}
+var HSET=[4,5,6,8,10]; // 1x,1.25x,1.5x,2x,2.5x expressed in 1/4-unit steps
+
+function generate(){
+  if(S.mode==='rectangle') return genRectangle();
+  if(S.mode==='container') return genContainer();
+  if(S.mode==='cluster') return genCluster();
+  return genGlitch();
+}
+
+/* CLUSTER: the "Glitch pattern library" principle — seed a cell, then accrete
+   unit blocks that connect at a corner or edge (8-connectivity, never floating).
+   "# of Blocks" drives complexity; vertical runs merge into 1x/2x/3x blocks;
+   optional mirror/quad/radial symmetry reproduces the motif compositions. */
+function applySymmetry(cells,sym){
+  if(sym==='none') return cells;
+  var set={}, out=[];
+  function add(i,j){var k=i+','+j; if(!set[k]){set[k]=1; out.push([i,j]);}}
+  cells.forEach(function(c){add(c[0],c[1]);});
+  var base=cells.slice();
+  if(sym==='mirror'||sym==='quad'){ base.forEach(function(c){add(-c[0]-1,c[1]);}); }
+  if(sym==='quad'){ out.slice().forEach(function(c){add(c[0],-c[1]-1);}); }
+  if(sym==='radial'){
+    base.forEach(function(c){var i=c[0],j=c[1]; add(-j-1,i); add(-i-1,-j-1); add(j,-i-1);});
+  }
+  return out;
+}
+function genCluster(){
+  var d=dims();
+  var bu=baseUnit();
+  var cellW=bu.w, cellH=bu.h, gap=Math.max(S.gap, -Math.min(cellW,cellH)*0.9);
+  var stepX=cellW+gap, stepY=cellH+gap;
+  var N=Math.max(1,Math.round(S.blocks));
+  var r=rng(S.seed);
+  var occ={'0,0':1}, cells=[[0,0]];
+  var N8=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+  var airy=1-(S.dens/100);
+  var guard=0;
+  while(cells.length<N && guard<N*80){
+    guard++;
+    var base=cells[Math.floor(r()*cells.length)];
+    var dir=N8[Math.floor(r()*8)];
+    var ni=base[0]+dir[0], nj=base[1]+dir[1], k=ni+','+nj;
+    if(occ[k]) continue;
+    var orth=(occ[(ni+1)+','+nj]?1:0)+(occ[(ni-1)+','+nj]?1:0)+(occ[ni+','+(nj+1)]?1:0)+(occ[ni+','+(nj-1)]?1:0);
+    if(orth>=3 && r()<0.5+airy*0.45) continue;   // keep it airy / leave holes
+    occ[k]=1; cells.push([ni,nj]);
+  }
+  /* symmetry is now applied universally at the block level (see applyEffects) */
+  var occ2={}, minI=1e9,minJ=1e9,maxI=-1e9,maxJ=-1e9;
+  cells.forEach(function(c){occ2[c[0]+','+c[1]]=1;if(c[0]<minI)minI=c[0];if(c[1]<minJ)minJ=c[1];if(c[0]>maxI)maxI=c[0];if(c[1]>maxJ)maxJ=c[1];});
+  var runs=[];
+  for(var i=minI;i<=maxI;i++){
+    var j=minJ;
+    while(j<=maxJ){
+      if(occ2[i+','+j]){ var run=1; while(occ2[i+','+(j+run)]) run++; runs.push({ci:i,cj:j,cs:run}); j+=run; }
+      else j++;
+    }
+  }
+  var totalW=(maxI-minI+1)*stepX-gap, totalH=(maxJ-minJ+1)*stepY-gap;
+  var offX=(d.w-totalW)/2, offY=(d.h-totalH)/2, out=[];
+  runs.forEach(function(b){
+    out.push({x:offX+(b.ci-minI)*stepX, y:offY+(b.cj-minJ)*stepY, w:cellW, h:b.cs*cellH+(b.cs-1)*gap});
+  });
+  return {blocks:out, d:d, bu:bu};
+}
+
+/* GLITCH: corner-connected columns of vertical blocks on a 1/4-unit grid */
+function genGlitch(){
+  var d=dims();
+  var W=(S.rot===90)?d.h:d.w, H=(S.rot===90)?d.w:d.h;
+  var bu=baseUnit();
+  var q=bu.h/4;                                   // brand 1/4x vertical grid
+  var rowsQ=Math.max(8, Math.floor(H/q));
+  var r=rng(S.seed);
+  var variance=S.hvar/100, density=S.dens/100, dispAmt=(S.disp/100)*rowsQ*0.28;
+
+  function pickHq(){                              // discrete brand heights
+    var maxI=Math.round(variance*(HSET.length-1));
+    return HSET[Math.floor(r()*(maxI+1))];
+  }
+  var wChoices=[0.75,1,1,1.25,1.5,2,2.5];
+  function pickW(){
+    if(!S.mixUnits) return bu.w;
+    var raw=wChoices[Math.floor(r()*wChoices.length)];
+    return Math.max(6, Math.round(bu.w*(1+(raw-1)*(S.mixAmount/100))));
+  }
+
+  var blocks=[], prev=null, cursorX=0, guard=0;
+  while(cursorX < W + bu.w && guard<4000){
+    guard++;
+    var w=pickW(), hq=pickHq(), topq;
+    if(!prev){ topq=Math.round((rowsQ-hq)/2+(r()-0.5)*rowsQ*0.3); }
+    else{
+      var lo=prev.top-hq+1, hi=prev.bot-1;
+      var jit=(r()-0.5)*2*dispAmt;
+      topq=Math.round(lo+r()*(hi-lo)+jit*0.5);
+    }
+    topq=clamp(topq,-Math.floor(hq*0.4),rowsQ-Math.ceil(hq*0.6));
+    var botq=topq+hq;
+    var present=r()<(0.55+density*0.45);
+    if(present){ blocks.push({x:cursorX,y:topq*q,w:w,h:hq*q}); prev={top:topq,bot:botq}; }
+    else if(!prev){ blocks.push({x:cursorX,y:topq*q,w:w,h:hq*q}); prev={top:topq,bot:botq}; }
+    cursorX += w + S.gap;
+  }
+  return {blocks:blocks, d:d, bu:bu};
+}
+
+/* RECTANGLE: grid of block units with overlapping corners; some cells merge
+   into bigger squares/rectangles (page 5 — "extension of overlapping corners") */
+function genRectangle(){
+  var d=dims(), W=d.w, H=d.h;
+  var bu=baseUnit();
+  var stepX=Math.max(8, bu.w+S.gap), stepY=Math.max(8, bu.h+S.gap);
+  var cols=Math.max(1,Math.round((W)/stepX));
+  var rows=Math.max(1,Math.round((H)/stepY));
+  var r=rng(S.seed), density=S.dens/100;
+  var ov=Math.max(3, bu.w*0.14);                  // corner overlap
+  var occ=[]; for(var i=0;i<cols;i++){occ.push([]);}
+  var blocks=[];
+  var offX=(W-(cols*stepX-S.gap))/2, offY=(H-(rows*stepY-S.gap))/2;
+  for(var cx=0;cx<cols;cx++)for(var cy=0;cy<rows;cy++){
+    if(occ[cx][cy]) continue;
+    var spanX=1, spanY=1, rr=r();
+    if(rr<0.16 && cx+1<cols && cy+1<rows && !occ[cx+1][cy] && !occ[cx][cy+1] && !occ[cx+1][cy+1]){spanX=2;spanY=2;}
+    else if(rr<0.40 && cx+1<cols && !occ[cx+1][cy]){spanX=2;}
+    else if(rr<0.62 && cy+1<rows && !occ[cx][cy+1]){spanY=2;}
+    for(var ax=0;ax<spanX;ax++)for(var ay=0;ay<spanY;ay++){occ[cx+ax]=occ[cx+ax]||[];occ[cx+ax][cy+ay]=true;}
+    if(r()>density) continue;                     // density leaves negative space
+    var x=offX+cx*stepX, y=offY+cy*stepY;
+    var w=bu.w*spanX+(spanX-1)*S.gap, h=bu.h*spanY+(spanY-1)*S.gap;
+    var ovX=ov, ovY=ov*(bu.h/bu.w);               // proportional overlap keeps block ratio
+    blocks.push({x:x-ovX/2, y:y-ovY/2, w:w+ovX, h:h+ovY});
+  }
+  return {blocks:blocks, d:d, bu:bu};
+}
+
+/* CONTAINER (page 6): "loosely based on the negative space of the glitch."
+   A large rounded-rectangle body on a coarse cell grid, with a few edge cells
+   ADDED (tabs stepping up/out) and SUBTRACTED (notches cut in) using the same
+   unit-block language. Traced as ONE union path with rounded corners. */
+function genContainer(){
+  var d=dims(), W=d.w, H=d.h;
+  var bu=baseUnit();
+  var r=rng(S.seed);
+  var margin=Math.min(W,H)*0.12;
+  var areaW=W-2*margin, areaH=H-2*margin;
+  // coarse, clean steps: # of Blocks tunes grid fineness; cells follow the
+  // Glitch unit ratio (block W:H), consistent with the other modes.
+  var gridN=clamp(Math.round(3+S.blocks/6),3,14);
+  var aspect=bu.w/bu.h;                                    // desired cell W:H
+  var base=Math.max(Math.min(bu.w,bu.h)*1.05, Math.min(areaW,areaH)/gridN);
+  var cw0=base*Math.sqrt(aspect), ch0=base/Math.sqrt(aspect);
+  var cols=Math.max(3, Math.round(areaW/cw0));
+  var rows=Math.max(3, Math.round(areaH/ch0));
+  var cw=cw0, ch=ch0;                                      // exact-ratio cells (body is centred, not stretched)
+  var density=S.dens/100;
+  var occ={};
+  function set(i,j){occ[i+','+j]=1;}
+  function del(i,j){delete occ[i+','+j];}
+  for(var i=0;i<cols;i++) for(var j=0;j<rows;j++) set(i,j);   // solid body
+  // TOP edge stepping — the glitch's negative space
+  for(var i2=0;i2<cols;i2++){
+    var rnd=r();
+    if(rnd < 0.28+density*0.30) set(i2,-1);                    // tab up
+    else if(rnd > 0.80-density*0.15){ del(i2,0); if(r()<0.22) del(i2,1); } // notch down (1-2 deep)
+  }
+  // corner & side accents (kept sparse for a clean container)
+  if(r()<0.55) del(cols-1,0);                                 // top-right cut
+  if(r()<0.45){ del(0,rows-1); if(r()<0.3) del(1,rows-1); }   // bottom-left step
+  if(r()<0.45) set(cols, Math.floor(rows*(0.3+r()*0.4)));     // right-edge tab
+  if(r()<0.28) del(cols-1,rows-1);                            // bottom-right cut
+  // normalize (tabs live at row -1) and emit cells as rects, centred on the canvas
+  var minJ=0,maxJ=0; Object.keys(occ).forEach(function(k){var j=+k.split(',')[1]; if(j<minJ)minJ=j; if(j>maxJ)maxJ=j;});
+  var bodyW=cols*cw, bodyH=(maxJ-minJ+1)*ch;
+  var offX=(W-bodyW)/2, offY=(H-bodyH)/2;
+  var blocks=[];
+  Object.keys(occ).forEach(function(k){
+    var p=k.split(','), i=+p[0], j=+p[1];
+    blocks.push({x:offX+i*cw, y:offY+(j-minJ)*ch, w:cw, h:ch});
+  });
+  return {blocks:blocks, d:d, bu:bu, radBase:Math.min(cw,ch)*0.9};
+}
+
+function rectStr(x,y,w,h,rad,fill,stroke,sw,strokeCol){
+  var rx=Math.min(rad,w/2,h/2);
+  var attrs='x="'+f2(x)+'" y="'+f2(y)+'" width="'+f2(w)+'" height="'+f2(h)+'" rx="'+f2(rx)+'"';
+  if(stroke) return '<rect '+attrs+' fill="none" stroke="'+strokeCol+'" stroke-width="'+sw+'"/>';
+  return '<rect '+attrs+' fill="'+fill+'"/>';
+}
+
+/* ---- Boolean UNION of axis-aligned rectangles (Figma "Union" pathfinder) ----
+   Coordinate-compress into a cell grid, mark filled cells, then trace the
+   boundary between filled/empty cells into closed loops (outer + holes).
+   Internal shared edges are never emitted, so they disappear. Corner-touching
+   blocks (degree-4 vertices) are separated with a consistent turn rule. */
+function unionLoops(blocks){
+  if(!blocks.length) return [];
+  var xset={}, yset={};
+  blocks.forEach(function(b){ xset[b.x]=1; xset[b.x+b.w]=1; yset[b.y]=1; yset[b.y+b.h]=1; });
+  var xs=Object.keys(xset).map(Number).sort(function(a,b){return a-b;});
+  var ys=Object.keys(yset).map(Number).sort(function(a,b){return a-b;});
+  var nx=xs.length, ny=ys.length;
+  if(nx<2||ny<2) return [];
+  var xi={}, yi={}, i, j;
+  for(i=0;i<nx;i++) xi[xs[i]]=i;
+  for(j=0;j<ny;j++) yi[ys[j]]=j;
+  var W=nx-1, H=ny-1;
+  var fill=[]; for(i=0;i<W;i++){ fill.push(new Uint8Array(H)); }
+  blocks.forEach(function(b){
+    var i0=xi[b.x], i1=xi[b.x+b.w], j0=yi[b.y], j1=yi[b.y+b.h];
+    for(var ii=i0;ii<i1;ii++) for(var jj=j0;jj<j1;jj++) fill[ii][jj]=1;
+  });
+  function F(i,j){ return (i<0||j<0||i>=W||j>=H)?0:fill[i][j]; }
+  var edges=[];
+  for(i=0;i<W;i++) for(j=0;j<H;j++){
+    if(!fill[i][j]) continue;
+    var x0=xs[i], x1=xs[i+1], y0=ys[j], y1=ys[j+1];
+    if(!F(i,j-1)) edges.push({a:[x1,y0], b:[x0,y0]}); // top
+    if(!F(i-1,j)) edges.push({a:[x0,y0], b:[x0,y1]}); // left
+    if(!F(i,j+1)) edges.push({a:[x0,y1], b:[x1,y1]}); // bottom
+    if(!F(i+1,j)) edges.push({a:[x1,y1], b:[x1,y0]}); // right
+  }
+  function key(p){ return p[0]+','+p[1]; }
+  var byStart={};
+  edges.forEach(function(e,idx){ (byStart[key(e.a)]=byStart[key(e.a)]||[]).push(idx); });
+  var used=new Array(edges.length); for(i=0;i<edges.length;i++) used[i]=false;
+  var loops=[];
+  for(var s=0;s<edges.length;s++){
+    if(used[s]) continue;
+    var loop=[], cur=s, guard=0;
+    while(cur!==-1 && !used[cur] && guard<edges.length*4+8){
+      guard++;
+      used[cur]=true;
+      var e=edges[cur];
+      loop.push(e.a);
+      var din=[e.b[0]-e.a[0], e.b[1]-e.a[1]];
+      var cand=byStart[key(e.b)]||[];
+      var best=-1, bestScore=Infinity;
+      for(var c=0;c<cand.length;c++){
+        var ci=cand[c]; if(used[ci]) continue;
+        var eo=edges[ci];
+        var dout=[eo.b[0]-eo.a[0], eo.b[1]-eo.a[1]];
+        var ang=cwAngle(din,dout);
+        if(ang<bestScore){ bestScore=ang; best=ci; }
+      }
+      cur=best;
+    }
+    if(loop.length>=4) loops.push(loop);
+  }
+  return loops;
+}
+/* angle to rotate din -> dout, measured so we always take the tightest
+   right-hand turn (keeps interior consistent, separates corner touches) */
+function cwAngle(din,dout){
+  var a=Math.atan2(din[1],din[0]), b=Math.atan2(dout[1],dout[0]);
+  var dd=a-b; while(dd<=0.00001) dd+=Math.PI*2; while(dd>Math.PI*2) dd-=Math.PI*2;
+  return dd;
+}
+/* polygon -> rounded SVG subpath (r=0 gives sharp corners) */
+function roundedPath(pts,r){
+  var n=pts.length; if(n<3) return '';
+  var d='';
+  for(var i=0;i<n;i++){
+    var p0=pts[(i-1+n)%n], p1=pts[i], p2=pts[(i+1)%n];
+    var v1x=p0[0]-p1[0], v1y=p0[1]-p1[1], v2x=p2[0]-p1[0], v2y=p2[1]-p1[1];
+    var l1=Math.hypot(v1x,v1y)||1, l2=Math.hypot(v2x,v2y)||1;
+    var rr=Math.min(r,l1/2,l2/2);
+    var ax=p1[0]+v1x/l1*rr, ay=p1[1]+v1y/l1*rr;
+    var bx=p1[0]+v2x/l2*rr, by=p1[1]+v2y/l2*rr;
+    d+=(i===0?'M':' L')+f2(ax)+' '+f2(ay);
+    if(rr>0.01) d+=' Q'+f2(p1[0])+' '+f2(p1[1])+' '+f2(bx)+' '+f2(by);
+  }
+  return d+' Z';
+}
+function unionPathD(blocks,rad){
+  var loops=unionLoops(blocks), d='';
+  for(var i=0;i<loops.length;i++) d+=roundedPath(loops[i],rad);
+  return d;
+}
+
+/* =============================================================
+   Universal effect pipeline. Makes # of Blocks, Symmetry,
+   Displacement, Height variance and Mix unit sizes apply to EVERY
+   pattern type, not only the mode that natively generated them.
+   Runs on the raw block list before styling. Order matters: sizing
+   & scatter first, then symmetry so mirrored copies stay symmetric.
+   Container is a single merged body, so per-block scatters are
+   skipped for it (symmetry still applies; # of Blocks tunes its
+   grid). Glitch already bakes disp/hvar/mix into its own generator,
+   so those are skipped for glitch to avoid doubling up.
+   ============================================================= */
+function centerOf(blocks){
+  var cx=0,cy=0; blocks.forEach(function(b){cx+=b.x+b.w/2;cy+=b.y+b.h/2;});
+  return [cx/blocks.length, cy/blocks.length];
+}
+function applyBlockBudget(blocks){
+  // keep the N blocks nearest the composition centre (balanced trim)
+  if(!blocks.length || S.mode==='cluster' || S.mode==='container') return blocks;
+  var N=Math.max(1,Math.round(S.blocks));
+  if(blocks.length<=N) return blocks;
+  var c=centerOf(blocks);
+  return blocks.slice().sort(function(a,b){
+    var da=Math.pow(a.x+a.w/2-c[0],2)+Math.pow(a.y+a.h/2-c[1],2);
+    var db=Math.pow(b.x+b.w/2-c[0],2)+Math.pow(b.y+b.h/2-c[1],2);
+    return da-db;
+  }).slice(0,N);
+}
+function applyMixWidth(blocks){
+  if(!blocks.length || !S.mixUnits || S.mode==='glitch' || S.mode==='container') return blocks;
+  var r=rng(S.seed+9191), wChoices=[0.75,1,1,1.25,1.5,2,2.5];
+  return blocks.map(function(b){
+    var raw=wChoices[Math.floor(r()*wChoices.length)];
+    var f=1+(raw-1)*(S.mixAmount/100);
+    return {x:b.x, y:b.y, w:Math.max(4,b.w*f), h:b.h};
+  });
+}
+function applyHeightVar(blocks){
+  if(!blocks.length || S.hvar<=0 || S.mode==='glitch' || S.mode==='container') return blocks;
+  var r=rng(S.seed+3131), k=S.hvar/100;
+  return blocks.map(function(b){
+    var f=Math.max(0.2, 1+(r()*2-1)*k*0.8);
+    return {x:b.x, y:b.y, w:b.w, h:Math.max(4,b.h*f)};
+  });
+}
+function applyJitter(blocks){
+  if(!blocks.length || S.disp<=0 || S.mode==='glitch' || S.mode==='container') return blocks;
+  var r=rng(S.seed+4242), bu=baseUnit();
+  var amt=(S.disp/100)*Math.min(bu.w,bu.h)*0.9;
+  return blocks.map(function(b){
+    return {x:b.x+(r()*2-1)*amt, y:b.y+(r()*2-1)*amt, w:b.w, h:b.h};
+  });
+}
+/* Symmetrize by folding one region and reflecting it, so the result is
+   cleanly symmetric for ANY mode (including already-centred ones). */
+function applyBlockSymmetry(blocks, d){
+  if(!blocks.length || S.sym==='none') return blocks;
+  var cx=d.w/2, cy=d.h/2;
+  function mirX(b){ return {x:d.w-(b.x+b.w), y:b.y, w:b.w, h:b.h}; }
+  function mirY(b){ return {x:b.x, y:d.h-(b.y+b.h), w:b.w, h:b.h}; }
+  function rot90(b){ return {x:cx+cy-b.y-b.h, y:b.x+cy-cx, w:b.h, h:b.w}; }
+  var out=[];
+  if(S.sym==='mirror'){
+    blocks.forEach(function(b){ if(b.x+b.w/2<=cx){ out.push(b); out.push(mirX(b)); } });
+  }else if(S.sym==='quad'){
+    blocks.forEach(function(b){ if(b.x+b.w/2<=cx && b.y+b.h/2<=cy){ out.push(b); out.push(mirX(b)); out.push(mirY(b)); out.push(mirY(mirX(b))); } });
+  }else if(S.sym==='radial'){
+    blocks.forEach(function(b){ if(b.x+b.w/2<=cx && b.y+b.h/2<=cy){ var c1=rot90(b),c2=rot90(c1),c3=rot90(c2); out.push(b,c1,c2,c3); } });
+  }else return blocks;
+  return out.length?out:blocks;
+}
+function applyEffects(blocks, d){
+  blocks=applyBlockBudget(blocks);
+  blocks=applyMixWidth(blocks);
+  blocks=applyHeightVar(blocks);
+  blocks=applyJitter(blocks);
+  blocks=applyBlockSymmetry(blocks, d);
+  return blocks;
+}
+
+/* ---- build SVG string from state ---- */
+function buildSVG(){
+  var g=generate(), d=g.d, bu=g.bu;
+  var rawBlocks=applyEffects(g.blocks, d);
+  var bg=S.bg;
+  var single=S.glitch;
+  var mset=(S.multiSet && S.multiSet.length)? S.multiSet : [single];
+
+  var rr=rng(S.seed+777);
+  function pick(){ return S.multi ? mset[Math.floor(rr()*mset.length)] : single; }
+
+  var isLine=S.fill==='line', strokeW=S.stroke;
+  var dr=S.dang*Math.PI/180, ex=Math.cos(dr)*S.depth, ey=Math.sin(dr)*S.depth;
+  function radOf(w,h){var m=Math.min(w,h);return Math.min(S.rad/100*m, m/2);}
+
+  var blocks=[];
+  for(var i=0;i<rawBlocks.length;i++){
+    var rb=rawBlocks[i];
+    if(rb.w<=0||rb.h<=0) continue;
+    blocks.push({x:rb.x,y:rb.y,w:rb.w,h:rb.h,c:pick(),r:radOf(rb.w,rb.h)});
+  }
+
+  // Container renders as ONE unified shape (rounded rect + block steps),
+  // even when filled — never as separate tiled cells.
+  var useUnionFill = (S.mode==='container');
+
+  // Unified silhouette (Figma "Union"): needed for line, concentric echo, container.
+  var lineStroke = S.strokeColor;
+  var radBase = (g.radBase!=null) ? g.radBase : Math.min(bu.w, bu.h)*0.5;
+  var unionRad = S.rad/100 * radBase;
+  var concentric = (S.echoStyle==='concentric');
+  var needSil = isLine || useUnionFill || (S.echo>0 && concentric);
+  var unionD = needSil ? unionPathD(blocks, unionRad) : '';
+
+  // bounding box (for scaling concentric bands about the shape centre)
+  var bbx0=1e9,bby0=1e9,bbx1=-1e9,bby1=-1e9;
+  for(var bi=0;bi<blocks.length;bi++){var B=blocks[bi];if(B.x<bbx0)bbx0=B.x;if(B.y<bby0)bby0=B.y;if(B.x+B.w>bbx1)bbx1=B.x+B.w;if(B.y+B.h>bby1)bby1=B.y+B.h;}
+  var cxC=(bbx0+bbx1)/2, cyC=(bby0+bby1)/2;
+
+  // palette used for concentric colour cycling
+  var echoPal = (S.multiSet && S.multiSet.length>1) ? S.multiSet : [single, shade(single,-0.5), '#26EBFF'];
+
+  // draw the shape filled in one colour, optionally offset (union for container, else per-block)
+  function shapeFill(color, ox, oy){
+    ox=ox||0; oy=oy||0;
+    if(useUnionFill){
+      var tf=(ox||oy)?' transform="translate('+f2(ox)+','+f2(oy)+')"':'';
+      return '<path d="'+unionD+'" fill="'+color+'"'+tf+'/>';
+    }
+    var t='';
+    for(var b=0;b<blocks.length;b++){var bl=blocks[b]; t+=rectStr(bl.x+ox,bl.y+oy,bl.w,bl.h,bl.r,(color||bl.c),false,0);}
+    return t;
+  }
+  function facesStr(){
+    if(isLine) return '<path d="'+unionD+'" fill="none" stroke="'+lineStroke+'" stroke-width="'+strokeW+'" stroke-linejoin="round" stroke-linecap="round"/>';
+    if(useUnionFill) return '<path d="'+unionD+'" fill="'+single+'"/>';
+    var f='';
+    for(var k=0;k<blocks.length;k++){var bk=blocks[k];f+=rectStr(bk.x,bk.y,bk.w,bk.h,bk.r,bk.c,false,0);}
+    return f;
+  }
+
+  var inner='';
+
+  /* ---- ECHO (drawn at the very back) ---- */
+  if(S.echo>0){
+    if(concentric){
+      // Eurovision-style ripple: silhouette repeated at growing scale,
+      // each ring a solid colour cycling through the palette.
+      for(var e=S.echo;e>=1;e--){
+        var sc2=1+e*(S.eoff/110);
+        var oxE=Math.cos(dr)*S.eoff*e*0.55, oyE=Math.sin(dr)*S.eoff*e*0.55;
+        var col=echoPal[e % echoPal.length];
+        var tf='translate('+f2(cxC-sc2*cxC+oxE)+','+f2(cyC-sc2*cyC+oyE)+') scale('+f2(sc2)+')';
+        if(isLine) inner+='<g transform="'+tf+'"><path d="'+unionD+'" fill="none" stroke="'+col+'" stroke-width="'+f2(strokeW*sc2)+'" stroke-linejoin="round" stroke-linecap="round"/></g>';
+        else inner+='<path d="'+unionD+'" fill="'+col+'" transform="'+tf+'"/>';
+      }
+    }else{
+      // Trail: offset copies fading behind
+      for(var e2=S.echo;e2>=1;e2--){
+        var op=(0.10+0.5*(1-(e2/(S.echo+1)))).toFixed(3);
+        var oxx=e2*S.eoff, oyy=e2*S.eoff*0.35;
+        if(isLine){
+          inner+='<g opacity="'+op+'" transform="translate('+f2(oxx)+','+f2(oyy)+')"><path d="'+unionD+'" fill="none" stroke="'+lineStroke+'" stroke-width="'+strokeW+'" stroke-linejoin="round" stroke-linecap="round"/></g>';
+        }else{
+          inner+='<g opacity="'+op+'">'+shapeFill(useUnionFill?single:null,oxx,oyy)+'</g>';
+        }
+      }
+    }
+  }
+
+  /* ---- 3D extrude (in front of echo, behind faces) — stacks with echo.
+     Flat mode = one solid user-chosen colour; Shade = auto-darkened face. ---- */
+  if(S.depth>0){
+    var flat=(S.extFill==='flat');
+    var extShade=flat ? S.extColor : shade(single,-0.45);
+    var steps=Math.max(2,Math.round(S.depth));   // 1px increments -> solid slab
+    for(var s=steps;s>=1;s--){
+      var t=s/steps, ox=ex*t, oy=ey*t;
+      if(useUnionFill){
+        inner+=shapeFill(extShade, ox, oy);
+      }else{
+        var layer='';
+        for(var b=0;b<blocks.length;b++){
+          var bl=blocks[b];
+          var f=flat ? S.extColor : shade(S.multi?bl.c:single,-0.45);
+          layer+=rectStr(bl.x+ox,bl.y+oy,bl.w,bl.h,bl.r,f,false,0);
+        }
+        inner+='<g>'+layer+'</g>';
+      }
+    }
+  }
+
+  /* ---- faces (front) ---- */
+  inner+=facesStr();
+
+  var body=inner;
+  if(S.rot===90) body='<g transform="translate('+d.w+',0) rotate(90)">'+inner+'</g>';
+
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+d.w+'" height="'+d.h+'" viewBox="0 0 '+d.w+' '+d.h+'"><rect width="'+d.w+'" height="'+d.h+'" fill="'+bg+'"/>'+body+'</svg>';
+}
+
+/* ---- render ---- */
+function render(){
+  try{
+    var svg=buildSVG();
+    document.getElementById('svgHost').innerHTML=svg;
+    document.getElementById('svgHost').style.display='block';
+    document.getElementById('errbox').style.display='none';
+    var d=dims();
+    var lbl=document.getElementById('dimLabel');
+    if(lbl) lbl.textContent=d.w+' × '+d.h+' px';
+  }catch(err){
+    var eb=document.getElementById('errbox');
+    if(eb){eb.style.display='block';eb.textContent='Render error:\n'+(err && err.stack? err.stack: err);}
+    document.getElementById('svgHost').style.display='none';
+  }
+}
+
+function download(){
+  try{
+    var svg=buildSVG();
+    var blob=new Blob([svg],{type:'image/svg+xml'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    a.href=url; a.download='glitch-pattern-'+S.seed+'.svg';
+    document.body.appendChild(a); a.click(); a.parentNode.removeChild(a);
+    URL.revokeObjectURL(url);
+  }catch(err){ alert('Export failed: '+err); }
+}
+
+/* ================= UI ================= */
+function el(id){return document.getElementById(id);}
+function bindRange(id,key,suffix,fmt){
+  var e=el(id); if(!e) return;
+  e.value=S[key];
+  function upd(){ var v=S[key]; el('v_'+id).textContent=(fmt?fmt(v):v)+(suffix||''); }
+  e.addEventListener('input',function(){ S[key]=parseFloat(e.value); upd(); render(); });
+  upd();
+}
+
+/* build a segmented button set into container id */
+function buildChips(containerId, items, isOn, onPick, tealStyle){
+  var wrap=el(containerId); if(!wrap) return;
+  wrap.innerHTML='';
+  var btns=[];
+  items.forEach(function(it,idx){
+    var b=document.createElement('button');
+    b.className='chip'+(tealStyle?' teal':'')+(isOn(it,idx)?' on':'');
+    b.textContent=it.label;
+    b.addEventListener('click',function(){
+      onPick(it,idx);
+      btns.forEach(function(x,i2){
+        if(isOn(items[i2],i2)) x.className='chip'+(tealStyle?' teal':'')+' on';
+        else x.className='chip'+(tealStyle?' teal':'');
+      });
+      render();
+    });
+    wrap.appendChild(b); btns.push(b);
+  });
+}
+
+/* full selectable palette = brand colours + user custom colours */
+function allColors(){ return PAL.map(function(p){return p.hex;}).concat(S.customColors); }
+
+/* build color swatches (single-select) for background / glitch */
+function buildSwatches(containerId, getSel, onPick){
+  var wrap=el(containerId); if(!wrap) return;
+  wrap.innerHTML='';
+  var list=allColors(), sws=[];
+  function refresh(){ sws.forEach(function(x,i){ x.className='sw'+(getSel()===list[i]?' on':''); }); }
+  list.forEach(function(hex){
+    var s=document.createElement('div');
+    s.className='sw'+(getSel()===hex?' on':'');
+    s.title=hex; s.style.background=(hex==='#000000')?'#000':hex;
+    s.addEventListener('click',function(){ onPick(hex); refresh(); render(); });
+    wrap.appendChild(s); sws.push(s);
+  });
+}
+
+/* build multi-select palette (randomize set + concentric-echo bands) */
+function buildMultiSwatches(){
+  var wrap=el('multiSwatches'); if(!wrap) return;
+  wrap.innerHTML='';
+  allColors().forEach(function(hex){
+    var s=document.createElement('div');
+    s.className='sw'+(S.multiSet.indexOf(hex)>=0?' on':'');
+    s.title=hex; s.style.background=(hex==='#000000')?'#000':hex;
+    s.addEventListener('click',function(){
+      var i=S.multiSet.indexOf(hex);
+      if(i>=0){ if(S.multiSet.length>1) S.multiSet.splice(i,1); }
+      else S.multiSet.push(hex);
+      s.className='sw'+(S.multiSet.indexOf(hex)>=0?' on':'');
+      render();
+    });
+    wrap.appendChild(s);
+  });
+}
+
+/* rebuild every colour-swatch row (after custom list changes) */
+function rebuildColorSwatches(){
+  buildSwatches('bgSwatches', function(){return S.bg;}, function(hex){S.bg=hex;});
+  buildSwatches('glitchSwatches', function(){return S.glitch;}, function(hex){S.glitch=hex;});
+  buildSwatches('extColorSwatches', function(){return S.extColor;}, function(hex){S.extColor=hex;});
+  buildSwatches('strokeColorSwatches', function(){return S.strokeColor;}, function(hex){S.strokeColor=hex;});
+  buildMultiSwatches();
+}
+
+/* custom-colour manager: add (HEX/RGB) · edit code · delete */
+function addCustomColor(str){
+  var hex=parseColor(str);
+  if(!hex) return false;
+  if(allColors().indexOf(hex)<0) S.customColors.push(hex);
+  return hex;
+}
+function removeCustomColor(idx){
+  var hex=S.customColors[idx];
+  S.customColors.splice(idx,1);
+  // clean up any selection that pointed at the removed colour
+  if(S.bg===hex) S.bg='#000000';
+  if(S.glitch===hex) S.glitch='#FF0061';
+  var mi=S.multiSet.indexOf(hex); if(mi>=0) S.multiSet.splice(mi,1);
+  if(S.multiSet.length===0) S.multiSet.push('#FF0061');
+}
+function renderCustomList(){
+  var wrap=el('customList'); if(!wrap) return;
+  wrap.innerHTML='';
+  S.customColors.forEach(function(hex,idx){
+    var row=document.createElement('div'); row.className='custItem';
+    var sw=document.createElement('div'); sw.className='csw'; sw.style.background=hex;
+    var inp=document.createElement('input'); inp.type='text'; inp.className='txt'; inp.value=hex;
+    inp.addEventListener('change',function(){
+      var parsed=parseColor(inp.value);
+      if(!parsed){ inp.classList.add('bad'); return; }
+      inp.classList.remove('bad');
+      var old=S.customColors[idx];
+      S.customColors[idx]=parsed;
+      // migrate any selections using the old value
+      if(S.bg===old) S.bg=parsed;
+      if(S.glitch===old) S.glitch=parsed;
+      var mi=S.multiSet.indexOf(old); if(mi>=0) S.multiSet[mi]=parsed;
+      sw.style.background=parsed; inp.value=parsed;
+      rebuildColorSwatches(); render();
+    });
+    inp.addEventListener('input',function(){ inp.classList.toggle('bad', !parseColor(inp.value)); });
+    var del=document.createElement('button'); del.className='del'; del.textContent='×'; del.title='Delete';
+    del.addEventListener('click',function(){ removeCustomColor(idx); renderCustomList(); rebuildColorSwatches(); render(); });
+    row.appendChild(sw); row.appendChild(inp); row.appendChild(del);
+    wrap.appendChild(row);
+  });
+}
+
+/* ---- init ---- */
+var MODE_HINTS={
+  glitch:'Corner-connected vertical blocks in a strip. Heights follow the brand set (1x, 1.25x, 1.5x, 2x, 2.5x); the 1x unit uses the ratio above.',
+  cluster:'Glitch pattern library principle: blocks accrete in 2D, always connected at a corner or edge (never floating). "# of Blocks" drives complexity; add symmetry for motifs.',
+  rectangle:'Block units on a grid with overlapping corners; some merge into bigger squares. Great as a shape or image container.',
+  container:'A solid body with a glitch skyline on top — a container shape based on the negative space of the glitch.'
+};
+function updateModeRows(){
+  // every control now applies to every pattern type
+  el('blocksRow').style.display='block';
+  el('symRow').style.display='block';
+}
+function init(){
+  buildChips('modeBtns', [{label:'Glitch',v:'glitch'},{label:'Cluster',v:'cluster'},{label:'Rectangle',v:'rectangle'},{label:'Container',v:'container'}],
+    function(it){return it.v===S.mode;},
+    function(it){ S.mode=it.v; el('modeHint').textContent=MODE_HINTS[S.mode]; updateModeRows(); }, true);
+  el('modeHint').textContent=MODE_HINTS[S.mode];
+  buildChips('symBtns', [{label:'None',v:'none'},{label:'Mirror',v:'mirror'},{label:'Quad',v:'quad'},{label:'Radial',v:'radial'}],
+    function(it){return it.v===S.sym;}, function(it){S.sym=it.v;}, true);
+  buildChips('ratioBtns', RATIOS, function(it,i){return i===S.ratioIdx;}, function(it,i){S.ratioIdx=i;});
+  buildChips('sizeBtns', SIZES, function(it){return it.key===S.sizeKey;}, function(it){S.sizeKey=it.key;});
+  buildChips('rotBtns', [{label:'0°',v:0},{label:'90°',v:90}], function(it){return it.v===S.rot;}, function(it){S.rot=it.v;});
+  buildChips('mixBtns', [{label:'Off',v:false},{label:'On',v:true}],
+    function(it){return it.v===S.mixUnits;},
+    function(it){ S.mixUnits=it.v; el('mixAmtRow').style.display=S.mixUnits?'block':'none'; }, true);
+  buildChips('fillBtns', [{label:'Filled',v:'filled'},{label:'Line / Outlined',v:'line'}],
+    function(it){return it.v===S.fill;},
+    function(it){ S.fill=it.v; var ln=(S.fill==='line'); el('strokeRow').style.display=ln?'block':'none'; el('strokeColorRow').style.display=ln?'block':'none'; });
+  function updatePaletteVis(){
+    var showPal = S.multi || S.echoStyle==='concentric';
+    el('singleRow').style.display=S.multi?'none':'block';
+    el('multiRow').style.display=showPal?'block':'none';
+    el('multiLbl').textContent = S.multi ? 'Randomize between (pick 2+)' : 'Concentric echo palette';
+  }
+  buildChips('extFillBtns', [{label:'Shade',v:'shade'},{label:'Flat color',v:'flat'}],
+    function(it){return it.v===S.extFill;},
+    function(it){ S.extFill=it.v; el('extColorRow').style.display=(S.extFill==='flat')?'block':'none'; });
+  buildChips('echoStyleBtns', [{label:'Trail',v:'trail'},{label:'Concentric',v:'concentric'}],
+    function(it){return it.v===S.echoStyle;},
+    function(it){ S.echoStyle=it.v; el('echoHint').textContent = S.echoStyle==='concentric'
+      ? 'Concentric: the shape repeats at growing scale, each ring a solid colour from the palette below. Stacks with 3D extrude.'
+      : 'Trail: offset copies fading behind the shape.'; updatePaletteVis(); }, true);
+  el('echoHint').textContent='Trail: offset copies fading behind the shape.';
+  buildChips('colorModeBtns', [{label:'Single',v:false},{label:'Multicolor',v:true}],
+    function(it){return it.v===S.multi;},
+    function(it){ S.multi=it.v; updatePaletteVis(); }, true);
+
+  rebuildColorSwatches();
+  renderCustomList();
+  updatePaletteVis();
+
+  // custom colour add (HEX or RGB)
+  function doAdd(){
+    var inp=el('customInput');
+    var hex=addCustomColor(inp.value);
+    if(!hex){ inp.classList.add('bad'); return; }
+    inp.classList.remove('bad'); inp.value='';
+    renderCustomList(); rebuildColorSwatches(); render();
+  }
+  el('customAdd').addEventListener('click',doAdd);
+  el('customInput').addEventListener('keydown',function(e){ if(e.key==='Enter') doAdd(); });
+  el('customInput').addEventListener('input',function(){ el('customInput').classList.remove('bad'); });
+
+  bindRange('unit','unit','px');
+  bindRange('gap','gap','', function(v){return v<0? v+'px (overlap)': v+'px (gap)';});
+  bindRange('disp','disp','%');
+  bindRange('hvar','hvar','%');
+  bindRange('dens','dens','%');
+  bindRange('blocks','blocks','');
+  bindRange('mixAmount','mixAmount','%');
+  updateModeRows();
+  bindRange('stroke','stroke','px');
+  bindRange('rad','rad','%');
+  bindRange('depth','depth','px');
+  bindRange('dang','dang','°');
+  bindRange('echo','echo','');
+  bindRange('eoff','eoff','px');
+
+  el('regen').addEventListener('click',function(){ S.seed=Math.floor(Math.random()*1e9); render(); });
+  el('dl').addEventListener('click',download);
+
+  render();
+}
+
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init);
+else init();
+</script>
+</body>
+</html>
