@@ -143,6 +143,7 @@ canvas{display:block;width:100%;height:100%}
   </div>
   <div class="btns">
     <button class="btn ghost" id="regen">↻ New seed</button>
+    <button class="btn ghost" id="dlSvg">↓ SVG</button>
     <button class="btn primary" id="dl">↓ PNG</button>
   </div>
 </aside>
@@ -166,13 +167,14 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { RoomEnvironment }    from 'three/addons/environments/RoomEnvironment.js';
 import { OrbitControls }      from 'three/addons/controls/OrbitControls.js';
+import { SVGRenderer }        from 'three/addons/renderers/SVGRenderer.js';
 
 /* ── State ─────────────────────────────────────────────────────────── */
 const S = {
   mode:'grid', seed:7331,
   blocks:24, dens:78, hvar:70,
   unit:70, gap:10, rad:14,
-  colors:'multi', bg:'#ffffff',
+  colors:'brand', bg:'#ffffff',
   mat:'glossy', irid:90, rough:6,
   cam:'persp', elev:38, dist:1400,
   rotate:false, rotspd:6,
@@ -368,8 +370,7 @@ function getGeo(w,h,d){
   return geoCache[k];
 }
 
-// Custom gradient shader — blends c1 (top) → c2 (bottom) across each block
-// using the local Y position of each fragment.
+/* ── Gradient shader ─────────────────────────────────────────────────── */
 const gradVert=`
   varying vec3 vWorldPos;
   varying vec3 vNormal;
@@ -385,62 +386,98 @@ const gradFrag=`
   uniform vec3 uC2;
   uniform float uHalfH;
   uniform float uIrid;
-  uniform float uRough;
   varying vec3 vWorldPos;
   varying vec3 vNormal;
-  // cheap iridescence via normal-based rainbow
-  vec3 iridescence(vec3 n, vec3 viewDir){
-    float f=pow(1.0-max(dot(n,viewDir),0.0),2.0);
+  vec3 iridescence(vec3 n,vec3 vd){
+    float f=pow(1.0-max(dot(n,vd),0.0),2.0);
     float hue=f*4.0+uIrid*0.01;
-    vec3 c=vec3(
-      0.5+0.5*cos(hue+0.0),
-      0.5+0.5*cos(hue+2.094),
-      0.5+0.5*cos(hue+4.189)
-    );
-    return c;
+    return vec3(0.5+0.5*cos(hue),0.5+0.5*cos(hue+2.094),0.5+0.5*cos(hue+4.189));
   }
   void main(){
-    // Vertical gradient: c1 at top, c2 at bottom of this block
-    float t=clamp((vWorldPos.y-(gl_FragCoord.z*0.0))/(uHalfH*2.0),0.0,1.0);
+    float t=clamp(vWorldPos.y/(uHalfH*2.0),0.0,1.0);
     vec3 base=mix(uC2,uC1,t);
-    // Fake view direction from world pos
     vec3 vd=normalize(cameraPosition-vWorldPos);
-    vec3 irid=iridescence(vNormal,vd);
-    float iridStr=uIrid/100.0;
-    vec3 col=mix(base, irid*base*1.4, iridStr*0.6);
-    // Simple diffuse shading baked in
+    vec3 col=mix(base,iridescence(vNormal,vd)*base*1.4,uIrid/100.0*0.6);
     float diff=max(dot(vNormal,normalize(vec3(1.0,2.0,1.0))),0.0)*0.5+0.5;
-    gl_FragColor=vec4(col*diff, 1.0);
+    gl_FragColor=vec4(col*diff,1.0);
   }
 `;
 
-function makeMat(c1hex, c2hex, halfH){
-  const mat=new THREE.ShaderMaterial({
+function makeGradMat(c1hex,c2hex,halfH){
+  return new THREE.ShaderMaterial({
     uniforms:{
       uC1:{value:new THREE.Color(c1hex)},
       uC2:{value:new THREE.Color(c2hex)},
       uHalfH:{value:halfH},
       uIrid:{value:S.irid},
-      uRough:{value:S.rough},
       cameraPosition:{value:new THREE.Vector3()},
     },
     vertexShader:gradVert,
     fragmentShader:gradFrag,
   });
-  return mat;
 }
 
-function makePBRMat(c1hex){
-  return new THREE.MeshPhysicalMaterial({
-    color:new THREE.Color(c1hex),
-    metalness:0.0,
-    roughness:S.rough/100,
-    iridescence:S.irid/100,
-    iridescenceIOR:1.85,
-    iridescenceThicknessRange:[80,700],
-    clearcoat:1.0,
-    clearcoatRoughness:0.05,
-  });
+/* ── Unified material factory ────────────────────────────────────────── */
+function makeBlockMat(c1hex,c2hex,halfH){
+  const r=S.rough/100;
+  switch(S.mat){
+    case 'chrome':
+      return new THREE.MeshPhysicalMaterial({
+        color:new THREE.Color(c1hex),
+        metalness:1.0,
+        roughness:Math.max(0.02,r*0.3),
+        clearcoat:0.6,
+        clearcoatRoughness:0.05,
+        envMapIntensity:2.0,
+      });
+    case 'glass':
+      return new THREE.MeshPhysicalMaterial({
+        color:new THREE.Color(c1hex),
+        metalness:0,
+        roughness:Math.max(0.0,r*0.2),
+        transmission:0.88,
+        transparent:true,
+        ior:1.5,
+        clearcoat:1.0,
+        clearcoatRoughness:0.05,
+        thickness:60,
+        side:THREE.DoubleSide,
+      });
+    case 'neon':
+      return new THREE.MeshStandardMaterial({
+        color:new THREE.Color(c1hex),
+        emissive:new THREE.Color(c1hex),
+        emissiveIntensity:0.7,
+        roughness:0.75,
+        metalness:0.0,
+      });
+    case 'matte':
+      return new THREE.MeshStandardMaterial({
+        color:new THREE.Color(c1hex),
+        roughness:0.88,
+        metalness:0,
+      });
+    case 'gradient':
+      return makeGradMat(c1hex,c2hex,halfH);
+    case 'glossy':
+    default:
+      return new THREE.MeshPhysicalMaterial({
+        color:new THREE.Color(c1hex),
+        metalness:0.0,
+        roughness:r,
+        iridescence:S.irid/100,
+        iridescenceIOR:1.85,
+        iridescenceThicknessRange:[80,700],
+        clearcoat:1.0,
+        clearcoatRoughness:0.05,
+      });
+  }
+}
+
+/* ── Extract base color from any material ────────────────────────────── */
+function matColor(mat){
+  if(mat.isShaderMaterial) return mat.uniforms.uC1.value;
+  return mat.color||new THREE.Color('#FF0061');
 }
 
 /* ── Block group ─────────────────────────────────────────────────────── */
@@ -460,14 +497,7 @@ function rebuild(){
   const blocks=generateBlocks();
   blocks.forEach(({x,y,z,w,h,d,c1,c2})=>{
     const geo=getGeo(w,h,d);
-    let mat;
-    if(S.mat==='glossy'){
-      mat=makePBRMat(c1);
-    } else if(S.mat==='gradient'){
-      mat=makeMat(c1,c2,h/2);
-    } else {
-      mat=new THREE.MeshStandardMaterial({color:new THREE.Color(c1),roughness:0.85,metalness:0});
-    }
+    const mat=makeBlockMat(c1,c2,h/2);
     const mesh=new THREE.Mesh(geo,mat);
     mesh.position.set(x,y,z);
     mesh.castShadow=true;
@@ -476,20 +506,58 @@ function rebuild(){
   });
 }
 
-/* ── Update PBR mat uniforms without full rebuild ────────────────────── */
+/* ── Update mat uniforms without full rebuild ────────────────────────── */
 function updateMats(){
   blockGroup.children.forEach(m=>{
     if(!m.material) return;
     if(m.material.isShaderMaterial){
       m.material.uniforms.uIrid.value=S.irid;
-      m.material.uniforms.uRough.value=S.rough;
       m.material.needsUpdate=true;
     } else if(m.material.isMeshPhysicalMaterial){
       m.material.iridescence=S.irid/100;
       m.material.roughness=S.rough/100;
       m.material.needsUpdate=true;
+    } else if(m.material.isMeshStandardMaterial){
+      if(S.mat==='neon') m.material.emissiveIntensity=0.3+S.irid/100*0.9;
     }
   });
+}
+
+/* ── SVG export ──────────────────────────────────────────────────────── */
+function downloadSVG(){
+  const W=1200, H=900;
+  const svgR=new SVGRenderer();
+  svgR.setSize(W,H);
+  svgR.setQuality('high');
+
+  // Swap to Lambert (SVGRenderer doesn't support PBR/custom shaders)
+  const origMats=[];
+  blockGroup.children.forEach(m=>{
+    origMats.push(m.material);
+    m.material=new THREE.MeshLambertMaterial({color:matColor(m.material).clone(),side:THREE.FrontSide});
+  });
+  const origGroundVis=ground.visible;
+  ground.visible=false;
+
+  svgR.render(scene,camera);
+  ground.visible=origGroundVis;
+  blockGroup.children.forEach((m,i)=>{ m.material.dispose(); m.material=origMats[i]; });
+
+  // Inject background rect before all geometry
+  const svgEl=svgR.domElement;
+  svgEl.setAttribute('xmlns','http://www.w3.org/2000/svg');
+  const bg=document.createElementNS('http://www.w3.org/2000/svg','rect');
+  bg.setAttribute('width','100%'); bg.setAttribute('height','100%');
+  bg.setAttribute('fill',S.bg);
+  svgEl.insertBefore(bg,svgEl.firstChild);
+
+  const str=new XMLSerializer().serializeToString(svgEl);
+  const blob=new Blob([str],{type:'image/svg+xml'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.download=`glitch-3d-${S.seed}.svg`;
+  a.href=url; a.click();
+  URL.revokeObjectURL(url);
 }
 
 /* ── Animate ─────────────────────────────────────────────────────────── */
@@ -498,7 +566,6 @@ function animate(){
   requestAnimationFrame(animate);
   tick+=0.005*(S.rotspd/10);
   if(S.rotate) blockGroup.rotation.y=tick;
-  // Update cameraPosition uniform for gradient mats
   blockGroup.children.forEach(m=>{
     if(m.material?.isShaderMaterial && m.material.uniforms.cameraPosition){
       m.material.uniforms.cameraPosition.value.copy(camera.position);
@@ -552,7 +619,8 @@ buildChips('colorBtns',
   it=>it.v===S.colors, it=>{ S.colors=it.v; rebuild(); });
 
 buildChips('matBtns',
-  [{label:'Glossy',v:'glossy'},{label:'Gradient',v:'gradient'},{label:'Matte',v:'matte'}],
+  [{label:'Gloss',v:'glossy'},{label:'Chrome',v:'chrome'},{label:'Glass',v:'glass'},
+   {label:'Neon',v:'neon'},{label:'Gradient',v:'gradient'},{label:'Matte',v:'matte'}],
   it=>it.v===S.mat, it=>{ S.mat=it.v; rebuild(); });
 
 buildChips('camBtns',
@@ -595,6 +663,7 @@ bindRange('elev','elev','°', buildCamera);
 bindRange('dist','dist','', buildCamera);
 
 el('regen').onclick=()=>{ S.seed=Math.floor(Math.random()*1e9); rebuild(); };
+el('dlSvg').onclick=downloadSVG;
 el('dl').onclick=()=>{
   renderer.render(scene,camera);
   const a=document.createElement('a');
