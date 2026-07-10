@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Glitch 3D — Consensus</title>
+<style>
+:root{
+  --straw:#FF0061;--teal:#26EBFF;
+  --panel:#0d0d0f;--panel2:#161619;--line:#2a2a30;
+  --txt:#e9e9ec;--txt-dim:#8a8a93;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;background:#060607;color:var(--txt);display:flex;height:100vh}
+.sidebar{width:300px;min-width:300px;height:100%;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;flex-shrink:0}
+.brandbar{padding:18px 20px 14px;border-bottom:1px solid var(--line)}
+.brandbar h1{font-size:13px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;display:flex;align-items:center;gap:9px}
+.dot{width:11px;height:22px;border-radius:3px;background:var(--straw);display:inline-block}
+.dot.t{background:var(--teal);height:16px}
+.brandbar p{font-size:11px;color:var(--txt-dim);margin-top:6px}
+.scroll{overflow-y:auto;flex:1;padding:6px 20px 24px}
+.scroll::-webkit-scrollbar{width:6px}
+.scroll::-webkit-scrollbar-thumb{background:#26262c;border-radius:8px}
+.group{padding:14px 0;border-bottom:1px solid var(--line)}
+.group:last-child{border-bottom:none}
+.group h2{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--txt-dim);margin-bottom:11px}
+.row{margin-bottom:13px}
+.row:last-child{margin-bottom:0}
+.lbl{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;margin-bottom:5px}
+.lbl em{color:var(--txt-dim);font-style:normal}
+.val{color:var(--teal);font-variant-numeric:tabular-nums;font-weight:600;font-size:11px}
+input[type=range]{-webkit-appearance:none;width:100%;height:4px;border-radius:4px;background:#2a2a30;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--straw);cursor:pointer;border:2px solid #060607;box-shadow:0 0 0 1px var(--straw)}
+.btnset{display:flex;flex-wrap:wrap;gap:5px}
+.chip{background:var(--panel2);border:1px solid var(--line);color:var(--txt-dim);border-radius:7px;padding:6px 9px;font-size:11px;font-weight:600;cursor:pointer;transition:.12s;flex:1;text-align:center}
+.chip:hover{border-color:#3a3a44;color:var(--txt)}
+.chip.on{background:var(--straw);color:#fff;border-color:var(--straw)}
+.chip.teal.on{background:var(--teal);color:#000;border-color:var(--teal)}
+.sw{width:32px;height:32px;border-radius:7px;border:2px solid var(--line);cursor:pointer;transition:.12s;flex-shrink:0}
+.sw.on{outline:2px solid #fff;outline-offset:2px}
+.swrow{display:flex;gap:7px;flex-wrap:wrap}
+.btns{display:flex;gap:8px;padding:14px 20px;border-top:1px solid var(--line);background:var(--panel);flex-shrink:0}
+.btn{flex:1;padding:10px;border-radius:9px;border:none;cursor:pointer;font-weight:700;font-size:12px;transition:.12s}
+.btn.primary{background:var(--straw);color:#fff}
+.btn.primary:hover{filter:brightness(1.1)}
+.btn.ghost{background:var(--panel2);color:var(--txt);border:1px solid var(--line)}
+.btn.ghost:hover{border-color:var(--teal)}
+.stage{flex:1;position:relative;overflow:hidden;min-width:0}
+canvas{display:block;width:100%;height:100%}
+#loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--txt-dim);pointer-events:none;z-index:10}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="brandbar">
+    <h1><span class="dot"></span><span class="dot t"></span>&nbsp;Glitch 3D</h1>
+    <p>CoinDesk / Consensus — Three.js ISO</p>
+  </div>
+  <div class="scroll">
+
+    <div class="group">
+      <h2>Pattern</h2>
+      <div class="row"><div class="btnset" id="modeBtns"></div></div>
+      <div class="row">
+        <div class="lbl"><span># blocks <em>(complexity)</em></span><span class="val" id="v_blocks"></span></div>
+        <input type="range" id="blocks" min="4" max="64" step="1">
+      </div>
+      <div class="row">
+        <div class="lbl"><span>Density</span><span class="val" id="v_dens"></span></div>
+        <input type="range" id="dens" min="25" max="100" step="1">
+      </div>
+      <div class="row">
+        <div class="lbl"><span>Height variance</span><span class="val" id="v_hvar"></span></div>
+        <input type="range" id="hvar" min="0" max="100" step="1">
+      </div>
+    </div>
+
+    <div class="group">
+      <h2>Geometry</h2>
+      <div class="row">
+        <div class="lbl"><span>Unit size</span><span class="val" id="v_unit"></span></div>
+        <input type="range" id="unit" min="30" max="130" step="1">
+      </div>
+      <div class="row">
+        <div class="lbl"><span>Gap</span><span class="val" id="v_gap"></span></div>
+        <input type="range" id="gap" min="0" max="50" step="1">
+      </div>
+      <div class="row">
+        <div class="lbl"><span>Corner radius</span><span class="val" id="v_rad"></span></div>
+        <input type="range" id="rad" min="2" max="45" step="1">
+      </div>
+    </div>
+
+    <div class="group">
+      <h2>Color</h2>
+      <div class="row"><div class="btnset" id="colorBtns"></div></div>
+      <div class="row">
+        <div class="lbl"><span>Background</span></div>
+        <div class="swrow" id="bgSwatches"></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <h2>Material</h2>
+      <div class="row"><div class="btnset" id="matBtns"></div></div>
+      <div class="row">
+        <div class="lbl"><span>Iridescence</span><span class="val" id="v_irid"></span></div>
+        <input type="range" id="irid" min="0" max="100" step="1">
+      </div>
+      <div class="row">
+        <div class="lbl"><span>Roughness</span><span class="val" id="v_rough"></span></div>
+        <input type="range" id="rough" min="0" max="80" step="1">
+      </div>
+    </div>
+
+    <div class="group">
+      <h2>Camera</h2>
+      <div class="row"><div class="btnset" id="camBtns"></div></div>
+      <div class="row">
+        <div class="lbl"><span>Elevation</span><span class="val" id="v_elev"></span></div>
+        <input type="range" id="elev" min="10" max="80" step="1">
+      </div>
+      <div class="row">
+        <div class="lbl"><span>Distance</span><span class="val" id="v_dist"></span></div>
+        <input type="range" id="dist" min="400" max="2500" step="50">
+      </div>
+    </div>
+
+    <div class="group">
+      <h2>Motion</h2>
+      <div class="row">
+        <div class="lbl"><span>Auto-rotate</span></div>
+        <div class="btnset" id="rotateBtns"></div>
+      </div>
+      <div class="row">
+        <div class="lbl"><span>Rotate speed</span><span class="val" id="v_rotspd"></span></div>
+        <input type="range" id="rotspd" min="1" max="20" step="1">
+      </div>
+    </div>
+
+  </div>
+  <div class="btns">
+    <button class="btn ghost" id="regen">↻ New seed</button>
+    <button class="btn primary" id="dl">↓ PNG</button>
+  </div>
+</aside>
+
+<main class="stage">
+  <div id="loading">Loading Three.js…</div>
+  <canvas id="c"></canvas>
+</main>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { RoomEnvironment }    from 'three/addons/environments/RoomEnvironment.js';
+import { OrbitControls }      from 'three/addons/controls/OrbitControls.js';
+
+/* ── State ─────────────────────────────────────────────────────────── */
+const S = {
+  mode:'grid', seed:7331,
+  blocks:24, dens:78, hvar:70,
+  unit:70, gap:10, rad:14,
+  colors:'multi', bg:'#ffffff',
+  mat:'glossy', irid:90, rough:6,
+  cam:'persp', elev:38, dist:1400,
+  rotate:false, rotspd:6,
+};
+
+/* ── Palettes ───────────────────────────────────────────────────────── */
+const PAL = {
+  brand : ['#FF0061','#26EBFF'],
+  multi : ['#FF0061','#26EBFF','#FFE15C','#B14DFF','#4ADE80','#FB923C','#F472B6','#818CF8'],
+  straw : ['#FF0061'],
+  teal  : ['#26EBFF'],
+};
+const BG_OPTS = [
+  {hex:'#ffffff', label:'White'},
+  {hex:'#000000', label:'Black'},
+  {hex:'#0d0d0f', label:'Dark'},
+];
+
+/* ── Seeded RNG (same algo as the SVG tool) ─────────────────────────── */
+function rng(seed){
+  let a=seed>>>0;
+  return function(){
+    a|=0; a=a+0x6D2B79F5|0;
+    let t=Math.imul(a^a>>>15,1|a);
+    t=t+Math.imul(t^t>>>7,61|t)^t;
+    return((t^t>>>14)>>>0)/4294967296;
+  };
+}
+
+/* ── Block generation (glitch logic adapted to 3-D XZ grid) ─────────── */
+const HMULTS=[1,1.25,1.5,2,2.5];
+function pickH(r,hvar){
+  const maxI=Math.max(0,Math.round((hvar/100)*(HMULTS.length-1)));
+  return HMULTS[Math.floor(r()*(maxI+1))];
+}
+
+function generateBlocks(){
+  const r=rng(S.seed);
+  const pal=PAL[S.colors]||PAL.multi;
+  const {unit,gap,hvar,dens,blocks:N}=S;
+  const step=unit+gap;
+  const density=dens/100;
+  const out=[];
+  function pickColor(){ return pal[Math.floor(r()*pal.length)]; }
+  function pickColor2(c1){
+    // pick a contrasting-ish second color for the gradient shader
+    const others=pal.filter(c=>c!==c1);
+    return others.length ? others[Math.floor(r()*others.length)] : pal[Math.floor(r()*pal.length)];
+  }
+
+  if(S.mode==='glitch'){
+    // Port of genGlitch: corner-connected vertical columns in strips
+    const rows=4;
+    for(let row=0;row<rows;row++){
+      const rr=rng(S.seed+row*9973);
+      let cx=-(N/2)*step, prev=null, guard=0;
+      while(cx<(N/2)*step && guard<300){
+        guard++;
+        const hm=pickH(rr,hvar);
+        const h=unit*hm;
+        const z=(row-(rows-1)/2)*step;
+        let topY=0;
+        if(prev){
+          const jit=(rr()-0.5)*unit*0.5;
+          topY=Math.round(prev.topY+jit);
+        }
+        if(rr()<density){
+          const c1=pickColor(), c2=pickColor2(c1);
+          out.push({x:cx+unit/2, y:topY+h/2, z, w:unit, h, d:unit, c1, c2});
+          prev={topY};
+        }
+        cx+=step;
+      }
+    }
+  } else if(S.mode==='cluster'){
+    // Cluster: 8-connectivity accreting in XZ
+    const occ={'0,0':1}; const cells=[[0,0]];
+    const N8=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+    let guard=0;
+    while(cells.length<N && guard<N*80){
+      guard++;
+      const base=cells[Math.floor(r()*cells.length)];
+      const dir=N8[Math.floor(r()*8)];
+      const ni=base[0]+dir[0], nj=base[1]+dir[1], k=`${ni},${nj}`;
+      if(occ[k]) continue;
+      occ[k]=1; cells.push([ni,nj]);
+    }
+    cells.forEach(([ci,cj])=>{
+      const h=unit*pickH(r,hvar);
+      const c1=pickColor(), c2=pickColor2(c1);
+      out.push({x:ci*step, y:h/2, z:cj*step, w:unit, h, d:unit, c1, c2});
+    });
+  } else {
+    // Grid: NxN grid, density + height variance
+    const side=Math.ceil(Math.sqrt(N));
+    for(let ix=0;ix<side;ix++){
+      for(let iz=0;iz<side;iz++){
+        if(r()>density) continue;
+        const h=unit*pickH(r,hvar);
+        const c1=pickColor(), c2=pickColor2(c1);
+        out.push({x:(ix-side/2)*step, y:h/2, z:(iz-side/2)*step, w:unit, h, d:unit, c1, c2});
+      }
+    }
+  }
+  return out;
+}
+
+/* ── Three.js scene ─────────────────────────────────────────────────── */
+const canvas=document.getElementById('c');
+const renderer=new THREE.WebGLRenderer({canvas, antialias:true, preserveDrawingBuffer:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.2;
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+
+const scene=new THREE.Scene();
+
+// Environment (drives the iridescence reflections)
+const pmrem=new THREE.PMREMGenerator(renderer);
+const envTex=pmrem.fromScene(new RoomEnvironment(renderer),0.04).texture;
+scene.environment=envTex;
+
+// Lights
+const ambient=new THREE.AmbientLight(0xffffff,0.5);
+scene.add(ambient);
+
+const keyLight=new THREE.DirectionalLight(0xfff8e8,3.5);
+keyLight.position.set(4,6,3);
+keyLight.castShadow=true;
+keyLight.shadow.mapSize.set(2048,2048);
+keyLight.shadow.camera.near=1; keyLight.shadow.camera.far=4000;
+keyLight.shadow.camera.left=-800; keyLight.shadow.camera.right=800;
+keyLight.shadow.camera.top=800;  keyLight.shadow.camera.bottom=-800;
+keyLight.shadow.bias=-0.001;
+scene.add(keyLight);
+
+const fillLight=new THREE.DirectionalLight(0x9080ff,1.8);
+fillLight.position.set(-3,2,-2);
+scene.add(fillLight);
+
+const rimLight=new THREE.DirectionalLight(0xff70b0,1.0);
+rimLight.position.set(1,-2,-3);
+scene.add(rimLight);
+
+// Ground plane (receives shadows)
+const groundGeo=new THREE.PlaneGeometry(6000,6000);
+const groundMat=new THREE.ShadowMaterial({opacity:0.12});
+const ground=new THREE.Mesh(groundGeo,groundMat);
+ground.rotation.x=-Math.PI/2;
+ground.receiveShadow=true;
+scene.add(ground);
+
+/* ── Camera + Controls ──────────────────────────────────────────────── */
+let camera, controls;
+
+function buildCamera(){
+  const stage=canvas.parentElement;
+  const W=stage.clientWidth||800, H=stage.clientHeight||600;
+  const aspect=W/H;
+  const dist=S.dist;
+  const elevRad=S.elev*Math.PI/180;
+  // Position: orbit at 45° azimuth, variable elevation
+  const camX=dist*Math.cos(elevRad)*Math.cos(Math.PI/4);
+  const camY=dist*Math.sin(elevRad);
+  const camZ=dist*Math.cos(elevRad)*Math.sin(Math.PI/4);
+
+  if(S.cam==='iso'){
+    const f=dist*0.38;
+    camera=new THREE.OrthographicCamera(-f*aspect,f*aspect,f,-f,-5000,8000);
+  } else {
+    camera=new THREE.PerspectiveCamera(28,aspect,1,8000);
+  }
+  camera.position.set(camX,camY,camZ);
+  camera.lookAt(0,0,0);
+
+  renderer.setSize(W,H);
+  if(controls) controls.dispose();
+  controls=new OrbitControls(camera,renderer.domElement);
+  controls.enableDamping=true;
+  controls.dampingFactor=0.06;
+  controls.target.set(0,0,0);
+  controls.update();
+}
+
+/* ── Geometry + Material caches ─────────────────────────────────────── */
+const geoCache={};
+function getGeo(w,h,d){
+  const r=Math.min(S.rad, w*0.49, h*0.49, d*0.49);
+  const k=`${w|0}_${h|0}_${d|0}_${r|0}`;
+  if(!geoCache[k]) geoCache[k]=new RoundedBoxGeometry(w,h,d,5,r);
+  return geoCache[k];
+}
+
+// Custom gradient shader — blends c1 (top) → c2 (bottom) across each block
+// using the local Y position of each fragment.
+const gradVert=`
+  varying vec3 vWorldPos;
+  varying vec3 vNormal;
+  void main(){
+    vec4 wp=modelMatrix*vec4(position,1.0);
+    vWorldPos=wp.xyz;
+    vNormal=normalize(normalMatrix*normal);
+    gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);
+  }
+`;
+const gradFrag=`
+  uniform vec3 uC1;
+  uniform vec3 uC2;
+  uniform float uHalfH;
+  uniform float uIrid;
+  uniform float uRough;
+  varying vec3 vWorldPos;
+  varying vec3 vNormal;
+  // cheap iridescence via normal-based rainbow
+  vec3 iridescence(vec3 n, vec3 viewDir){
+    float f=pow(1.0-max(dot(n,viewDir),0.0),2.0);
+    float hue=f*4.0+uIrid*0.01;
+    vec3 c=vec3(
+      0.5+0.5*cos(hue+0.0),
+      0.5+0.5*cos(hue+2.094),
+      0.5+0.5*cos(hue+4.189)
+    );
+    return c;
+  }
+  void main(){
+    // Vertical gradient: c1 at top, c2 at bottom of this block
+    float t=clamp((vWorldPos.y-(gl_FragCoord.z*0.0))/(uHalfH*2.0),0.0,1.0);
+    vec3 base=mix(uC2,uC1,t);
+    // Fake view direction from world pos
+    vec3 vd=normalize(cameraPosition-vWorldPos);
+    vec3 irid=iridescence(vNormal,vd);
+    float iridStr=uIrid/100.0;
+    vec3 col=mix(base, irid*base*1.4, iridStr*0.6);
+    // Simple diffuse shading baked in
+    float diff=max(dot(vNormal,normalize(vec3(1.0,2.0,1.0))),0.0)*0.5+0.5;
+    gl_FragColor=vec4(col*diff, 1.0);
+  }
+`;
+
+function makeMat(c1hex, c2hex, halfH){
+  const mat=new THREE.ShaderMaterial({
+    uniforms:{
+      uC1:{value:new THREE.Color(c1hex)},
+      uC2:{value:new THREE.Color(c2hex)},
+      uHalfH:{value:halfH},
+      uIrid:{value:S.irid},
+      uRough:{value:S.rough},
+      cameraPosition:{value:new THREE.Vector3()},
+    },
+    vertexShader:gradVert,
+    fragmentShader:gradFrag,
+  });
+  return mat;
+}
+
+function makePBRMat(c1hex){
+  return new THREE.MeshPhysicalMaterial({
+    color:new THREE.Color(c1hex),
+    metalness:0.0,
+    roughness:S.rough/100,
+    iridescence:S.irid/100,
+    iridescenceIOR:1.85,
+    iridescenceThicknessRange:[80,700],
+    clearcoat:1.0,
+    clearcoatRoughness:0.05,
+  });
+}
+
+/* ── Block group ─────────────────────────────────────────────────────── */
+const blockGroup=new THREE.Group();
+scene.add(blockGroup);
+
+function rebuild(){
+  // Remove old meshes
+  while(blockGroup.children.length){
+    const m=blockGroup.children[0];
+    blockGroup.remove(m);
+    if(m.material) m.material.dispose();
+  }
+  scene.background=new THREE.Color(S.bg);
+  ground.material.opacity= S.bg==='#ffffff'?0.08:0.18;
+
+  const blocks=generateBlocks();
+  blocks.forEach(({x,y,z,w,h,d,c1,c2})=>{
+    const geo=getGeo(w,h,d);
+    let mat;
+    if(S.mat==='glossy'){
+      mat=makePBRMat(c1);
+    } else if(S.mat==='gradient'){
+      mat=makeMat(c1,c2,h/2);
+    } else {
+      mat=new THREE.MeshStandardMaterial({color:new THREE.Color(c1),roughness:0.85,metalness:0});
+    }
+    const mesh=new THREE.Mesh(geo,mat);
+    mesh.position.set(x,y,z);
+    mesh.castShadow=true;
+    mesh.receiveShadow=true;
+    blockGroup.add(mesh);
+  });
+}
+
+/* ── Update PBR mat uniforms without full rebuild ────────────────────── */
+function updateMats(){
+  blockGroup.children.forEach(m=>{
+    if(!m.material) return;
+    if(m.material.isShaderMaterial){
+      m.material.uniforms.uIrid.value=S.irid;
+      m.material.uniforms.uRough.value=S.rough;
+      m.material.needsUpdate=true;
+    } else if(m.material.isMeshPhysicalMaterial){
+      m.material.iridescence=S.irid/100;
+      m.material.roughness=S.rough/100;
+      m.material.needsUpdate=true;
+    }
+  });
+}
+
+/* ── Animate ─────────────────────────────────────────────────────────── */
+let tick=0;
+function animate(){
+  requestAnimationFrame(animate);
+  tick+=0.005*(S.rotspd/10);
+  if(S.rotate) blockGroup.rotation.y=tick;
+  // Update cameraPosition uniform for gradient mats
+  blockGroup.children.forEach(m=>{
+    if(m.material?.isShaderMaterial && m.material.uniforms.cameraPosition){
+      m.material.uniforms.cameraPosition.value.copy(camera.position);
+    }
+  });
+  controls.update();
+  renderer.render(scene,camera);
+}
+
+/* ── Resize ──────────────────────────────────────────────────────────── */
+new ResizeObserver(()=>{ buildCamera(); }).observe(canvas.parentElement);
+
+/* ── Boot ────────────────────────────────────────────────────────────── */
+document.getElementById('loading').style.display='none';
+buildCamera();
+rebuild();
+animate();
+
+/* ── UI helpers ──────────────────────────────────────────────────────── */
+function el(id){ return document.getElementById(id); }
+
+function buildChips(id, items, isOn, onPick, teal){
+  const wrap=el(id); wrap.innerHTML='';
+  const btns=[];
+  items.forEach((it,idx)=>{
+    const b=document.createElement('button');
+    b.className='chip'+(teal?' teal':'')+(isOn(it,idx)?' on':'');
+    b.textContent=it.label;
+    b.onclick=()=>{
+      onPick(it,idx);
+      btns.forEach((x,i)=>{ x.className='chip'+(teal?' teal':'')+(isOn(items[i],i)?' on':''); });
+    };
+    wrap.appendChild(b); btns.push(b);
+  });
+}
+
+function bindRange(id, key, suffix, onchange, fmt){
+  const e=el(id); e.value=S[key];
+  function upd(){ el('v_'+id).textContent=(fmt?fmt(S[key]):S[key])+(suffix||''); }
+  e.oninput=()=>{ S[key]=parseFloat(e.value); upd(); onchange(); };
+  upd();
+}
+
+/* ── UI wiring ───────────────────────────────────────────────────────── */
+buildChips('modeBtns',
+  [{label:'Grid',v:'grid'},{label:'Cluster',v:'cluster'},{label:'Glitch',v:'glitch'}],
+  it=>it.v===S.mode, it=>{ S.mode=it.v; rebuild(); }, true);
+
+buildChips('colorBtns',
+  [{label:'Multi',v:'multi'},{label:'Brand',v:'brand'},{label:'Straw',v:'straw'},{label:'Teal',v:'teal'}],
+  it=>it.v===S.colors, it=>{ S.colors=it.v; rebuild(); });
+
+buildChips('matBtns',
+  [{label:'Glossy',v:'glossy'},{label:'Gradient',v:'gradient'},{label:'Matte',v:'matte'}],
+  it=>it.v===S.mat, it=>{ S.mat=it.v; rebuild(); });
+
+buildChips('camBtns',
+  [{label:'Persp',v:'persp'},{label:'Iso',v:'iso'}],
+  it=>it.v===S.cam, it=>{ S.cam=it.v; buildCamera(); }, true);
+
+buildChips('rotateBtns',
+  [{label:'Off',v:false},{label:'On',v:true}],
+  it=>it.v===S.rotate, it=>{ S.rotate=it.v; if(!it.v) blockGroup.rotation.y=0; }, true);
+
+// Background swatches
+(function(){
+  const wrap=el('bgSwatches'); wrap.innerHTML='';
+  BG_OPTS.forEach(({hex,label})=>{
+    const s=document.createElement('div');
+    s.className='sw'+(S.bg===hex?' on':'');
+    s.style.cssText=`background:${hex==='#ffffff'?'#f0f0f0':hex};border:1px solid #444`;
+    s.title=label;
+    s.onclick=()=>{
+      S.bg=hex;
+      wrap.querySelectorAll('.sw').forEach(x=>x.classList.remove('on'));
+      s.classList.add('on');
+      scene.background=new THREE.Color(S.bg);
+      ground.material.opacity=S.bg==='#ffffff'?0.08:0.18;
+    };
+    wrap.appendChild(s);
+  });
+})();
+
+bindRange('blocks','blocks','', rebuild);
+bindRange('dens','dens','%', rebuild);
+bindRange('hvar','hvar','%', rebuild);
+bindRange('unit','unit','', rebuild);
+bindRange('gap','gap','', rebuild);
+bindRange('rad','rad','', rebuild);
+bindRange('irid','irid','%', updateMats);
+bindRange('rough','rough','%', updateMats);
+bindRange('rotspd','rotspd','x', ()=>{});
+bindRange('elev','elev','°', buildCamera);
+bindRange('dist','dist','', buildCamera);
+
+el('regen').onclick=()=>{ S.seed=Math.floor(Math.random()*1e9); rebuild(); };
+el('dl').onclick=()=>{
+  renderer.render(scene,camera);
+  const a=document.createElement('a');
+  a.download=`glitch-3d-${S.seed}.png`;
+  a.href=canvas.toDataURL('image/png');
+  a.click();
+};
+</script>
+</body>
+</html>
